@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Controle Carrinho</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+
+    :root {
+      --bg:        #0a0a0a;
+      --surface:   #161616;
+      --surface2:  #1f1f1f;
+      --border:    #2a2a2a;
+      --text:      #e8e8e8;
+      --muted:     #666;
+      --blue:      #2979ff;
+      --blue-lit:  #448aff;
+      --purple:    #7c4dff;
+      --red:       #d32f2f;
+      --red-lit:   #ef5350;
+      --green:     #00c853;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.25rem 1rem 2rem;
+      gap: 1.25rem;
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    .top { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+    .brand { display: flex; flex-direction: column; }
+    .brand-title { font-size: 1rem; font-weight: 600; letter-spacing: 0.04em; color: var(--text); }
+    .brand-sub   { font-size: 0.72rem; color: var(--muted); margin-top: 2px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* Status pill */
+    .status-pill {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 50px; padding: 6px 14px;
+      font-size: 0.78rem; color: var(--muted);
+      transition: border-color 0.3s;
+    }
+    .status-pill.connected { border-color: var(--green); color: var(--green); }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--muted); flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .dot.on { background: var(--green); box-shadow: 0 0 0 3px rgba(0,200,83,.15); }
+    .dot.blink { animation: blink 0.8s ease-in-out infinite; background: #ff9800; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* Divider */
+    .divider { width: 100%; height: 1px; background: var(--border); }
+
+    /* Connect button */
+    .btn-main {
+      width: 100%; max-width: 320px;
+      padding: 15px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-main:active    { transform: scale(0.97); }
+    .btn-main.danger    { background: var(--red); }
+    .btn-main:disabled  { background: var(--surface2); color: var(--muted); cursor: not-allowed; }
+
+    /* Controller grid */
+    .controller { width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: .2; pointer-events: none; transition: opacity .3s; }
+    .controller.on { opacity: 1; pointer-events: auto; }
+
+    /* D-pad */
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 88px);
+      grid-template-rows: repeat(3, 88px);
+      gap: 5px;
+    }
+
+    .btn-dir {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 1.6rem;
+      color: #aaa;
+      transition: background 0.08s, border-color 0.08s, transform 0.05s, color 0.08s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-dir span.lbl { font-size: 0.6rem; color: var(--muted); margin-top: 3px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .btn-dir:active, .btn-dir.pressed {
+      background: var(--blue);
+      border-color: var(--blue-lit);
+      color: #fff;
+      transform: scale(0.93);
+    }
+    .btn-dir:active .lbl, .btn-dir.pressed .lbl { color: rgba(255,255,255,.6); }
+
+    .dpad-center {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; color: var(--muted); letter-spacing: 0.1em;
+      font-weight: 600;
+    }
+    .dpad-void { background: transparent; border: none; }
+
+    /* Bottom row */
+    .bottom-row { display: flex; gap: 10px; align-items: center; width: 100%; max-width: 280px; }
+
+    .btn-pivot {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 8px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: #aaa; font-size: 1.3rem; gap: 4px;
+      transition: background 0.08s, border-color 0.08s, transform 0.05s, color 0.08s;
+    }
+    .btn-pivot span.lbl { font-size: 0.6rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    .btn-pivot:active, .btn-pivot.pressed {
+      background: var(--purple);
+      border-color: #9e6eff;
+      color: #fff; transform: scale(0.93);
+    }
+    .btn-pivot:active .lbl, .btn-pivot.pressed .lbl { color: rgba(255,255,255,.6); }
+
+    .btn-stop {
+      width: 80px; height: 80px; flex-shrink: 0;
+      background: var(--red);
+      border: 1px solid var(--red-lit);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 1.8rem; color: #fff;
+      transition: background 0.08s, transform 0.05s;
+    }
+    .btn-stop:active { background: #b71c1c; transform: scale(0.92); }
+
+    /* Log strip */
+    .log-strip {
+      width: 100%; max-width: 340px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+      min-height: 38px;
+    }
+    .log-strip .tag { color: var(--blue-lit); font-weight: 600; flex-shrink: 0; }
+    .log-strip .msg { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Warning */
+    .warn {
+      width: 100%; max-width: 340px;
+      background: #1a1200; border: 1px solid #4a3000;
+      border-radius: 10px; padding: 10px 14px;
+      font-size: 0.78rem; color: #ff9800; line-height: 1.5; text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top">
+    <div class="brand">
+      <span class="brand-title">🕹 Controle Carrinho</span>
+      <span class="brand-sub">Bluetooth Low Energy</span>
+    </div>
+    <div class="status-pill" id="pill">
+      <div class="dot" id="dot"></div>
+      <span id="pillTxt">Desconectado</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <button class="btn-main" id="btnMain" onclick="toggleConnect()">
+    Conectar ao Carrinho
+  </button>
+
+  <!-- D-pad controller -->
+  <div class="controller" id="ctrl">
+
+    <div class="dpad">
+      <!-- Row 1 -->
+      <div class="dpad-void"></div>
+      <div class="btn-dir" id="bF"
+        ontouchstart="pressBtn('F',event)" ontouchend="releaseBtn(event)"
+        onmousedown="pressBtn('F',event)" onmouseup="releaseBtn(event)" onmouseleave="releaseBtn(event)">
+        ▲<span class="lbl">Frente</span>
+      </div>
+      <div class="dpad-void"></div>
+
+      <!-- Row 2 -->
+      <div class="btn-dir" id="bL"
+        ontouchstart="pressBtn('L',event)" ontouchend="releaseBtn(event)"
+        onmousedown="pressBtn('L',event)" onmouseup="releaseBtn(event)" onmouseleave="releaseBtn(event)">
+        ◀<span class="lbl">Esq</span>
+      </div>
+      <div class="dpad-center">MOVE</div>
+      <div class="btn-dir" id="bR"
+        ontouchstart="pressBtn('R',event)" ontouchend="releaseBtn(event)"
+        onmousedown="pressBtn('R',event)" onmouseup="releaseBtn(event)" onmouseleave="releaseBtn(event)">
+        ▶<span class="lbl">Dir</span>
+      </div>
+
+      <!-- Row 3 -->
+      <div class="dpad-void"></div>
+      <div class="btn-dir" id="bB"
+        ontouchstart="pressBtn('B',event)" ontouchend="releaseBtn(event)"
+        onmousedown="pressBtn('B',event)" onmouseup="releaseBtn(event)" onmouseleave="releaseBtn(event)">
+        ▼<span class="lbl">Ré</span>
+      </div>
+      <div class="dpad-void"></div>
+    </div>
+
+    <div class="bottom-row">
+      <div class="btn-pivot" id="bP"
+        ontouchstart="pressBtn('P',event)" ontouchend="releaseBtn(event)"
+        onmousedown="pressBtn('P',event)" onmouseup="releaseBtn(event)" onmouseleave="releaseBtn(event)">
+        ↺<span class="lbl">Pivot Esq</span>
+      </div>
+
+      <div class="btn-stop"
+        ontouchstart="sendCmd('S')" onmousedown="sendCmd('S')">⏹</div>
+
+      <div class="btn-pivot" id="bQ"
+        ontouchstart="pressBtn('Q',event)" ontouchend="releaseBtn(event)"
+        onmousedown="pressBtn('Q',event)" onmouseup="releaseBtn(event)" onmouseleave="releaseBtn(event)">
+        ↻<span class="lbl">Pivot Dir</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="log-strip">
+    <span class="tag">LOG</span>
+    <span class="msg" id="logMsg">Aguardando conexão...</span>
+  </div>
+
+  <div class="warn" id="httpsWarn" style="display:none">
+    ⚠️ Web Bluetooth requer HTTPS.<br>
+    Hospede este arquivo no GitHub Pages, Netlify ou<br>
+    rode <code>npx serve .</code> com HTTPS local.
+  </div>
+
+<script>
+  const SVC_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+  const RX_UUID  = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Escrevemos aqui
+  const TX_UUID  = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Notificações do ESP32
+
+  let bleDevice = null, rxChar = null, connected = false;
+  const enc = new TextEncoder();
+
+  /* ---- UI helpers ---- */
+  function setLog(msg) {
+    document.getElementById('logMsg').textContent = msg;
+  }
+
+  function setStatus(txt, state) { // state: '' | 'connected' | 'blink'
+    document.getElementById('pillTxt').textContent = txt;
+    const pill = document.getElementById('pill');
+    const dot  = document.getElementById('dot');
+    pill.className = 'status-pill' + (state === 'connected' ? ' connected' : '');
+    dot.className  = 'dot ' + (state === 'connected' ? 'on' : state === 'blink' ? 'blink' : '');
+  }
+
+  function setConnectedUI(on) {
+    connected = on;
+    document.getElementById('ctrl').className    = 'controller' + (on ? ' on' : '');
+    const btn = document.getElementById('btnMain');
+    btn.textContent = on ? 'Desconectar' : 'Conectar ao Carrinho';
+    btn.className   = 'btn-main' + (on ? ' danger' : '');
+  }
+
+  /* ---- BLE ---- */
+  async function toggleConnect() {
+    if (connected) { bleDevice?.gatt.disconnect(); return; }
+    if (!navigator.bluetooth) {
+      setLog('Web Bluetooth não suportado. Use Chrome no Android.');
+      return;
+    }
+    await connectBLE();
+  }
+
+  async function connectBLE() {
+    try {
+      setStatus('Procurando...', 'blink');
+      setLog('Abrindo seletor Bluetooth...');
+
+      bleDevice = await navigator.bluetooth.requestDevice({
+        filters: [{ name: 'Carrinho ESP32' }],
+        optionalServices: [SVC_UUID]
+      });
+
+      bleDevice.addEventListener('gattserverdisconnected', () => {
+        setConnectedUI(false);
+        setStatus('Desconectado', '');
+        setLog('Conexão encerrada.');
+        rxChar = null;
+      });
+
+      setStatus('Conectando...', 'blink');
+      setLog('Conectando ao GATT...');
+
+      const server  = await bleDevice.gatt.connect();
+      const service = await server.getPrimaryService(SVC_UUID);
+      rxChar        = await service.getCharacteristic(RX_UUID);
+
+      // Opcional: escuta notificações do ESP32
+      try {
+        const txChar = await service.getCharacteristic(TX_UUID);
+        await txChar.startNotifications();
+        txChar.addEventListener('characteristicvaluechanged', e => {
+          const msg = new TextDecoder().decode(e.target.value);
+          setLog('ESP32: ' + msg);
+        });
+      } catch(_) {}
+
+      setConnectedUI(true);
+      setStatus('Conectado', 'connected');
+      setLog('Pronto! Use os botões para controlar.');
+    } catch(e) {
+      setStatus('Erro', '');
+      setLog('Erro: ' + e.message);
+      console.error(e);
+    }
+  }
+
+  /* ---- Comandos ---- */
+  async function sendCmd(cmd) {
+    if (!rxChar || !connected) return;
+    try {
+      await rxChar.writeValue(enc.encode(cmd));
+      if (cmd !== 'S') setLog('Comando: ' + cmd);
+    } catch(e) {
+      setLog('Falha ao enviar: ' + e.message);
+    }
+  }
+
+  const cmdMap = { bF:'F', bL:'L', bR:'R', bB:'B', bP:'P', bQ:'Q' };
+
+  function pressBtn(cmd, e) {
+    e.preventDefault();
+    sendCmd(cmd);
+    // Destaca botão
+    for (const [id, c] of Object.entries(cmdMap)) {
+      if (c === cmd) document.getElementById(id)?.classList.add('pressed');
+    }
+  }
+
+  function releaseBtn(e) {
+    e.preventDefault();
+    sendCmd('S');
+    document.querySelectorAll('.btn-dir, .btn-pivot')
+      .forEach(el => el.classList.remove('pressed'));
+  }
+
+  /* ---- HTTPS check ---- */
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    document.getElementById('httpsWarn').style.display = 'block';
+  }
+</script>
+</body>
+</html>
